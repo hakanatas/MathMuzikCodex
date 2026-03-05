@@ -498,15 +498,16 @@ function ConvergentCalculationDetail({ convergents, step }) {
             <span className="font-bold text-blue-700">iv)</span> Devam:
             <span className="font-mono"> a₂ = <strong>1</strong></span>,
             <span className="font-mono"> a₃ = <strong>2</strong></span>,
-            <span className="font-mono"> a₄ = <strong>3</strong></span>,
-            <span className="font-mono"> a₅ = <strong>1</strong></span>,
-            <span className="font-mono"> a₆ = <strong>2</strong></span>, ...
+            <span className="font-mono"> a₄ = <strong>2</strong></span>,
+            <span className="font-mono"> a₅ = <strong>3</strong></span>,
+            <span className="font-mono"> a₆ = <strong>1</strong></span>,
+            <span className="font-mono"> a₇ = <strong>5</strong></span>, ...
           </div>
         </div>
         <div className="mt-3 bg-amber-50 rounded-lg p-3 text-center">
           <span className="text-sm text-slate-600">Sonuç: </span>
           <span className="font-mono font-bold text-amber-700 text-lg">
-            log₂(3/2) = [0; 1, 1, 2, 3, 1, 2, ...]
+            log₂(3/2) = [0; 1, 1, 2, 2, 3, 1, 5, ...]
           </span>
         </div>
       </Collapsible>
