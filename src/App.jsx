@@ -11,6 +11,7 @@ import {
   Line,
   Legend,
   Cell,
+  ReferenceDot,
 } from "recharts";
 import {
   Music,
@@ -966,7 +967,12 @@ function FiveLimitSection() {
               margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="n" tick={{ fontSize: 10 }} />
+              <XAxis
+                type="number"
+                dataKey="n"
+                domain={[5, 120]}
+                tick={{ fontSize: 10 }}
+              />
               <YAxis
                 tick={{ fontSize: 10 }}
                 label={{
@@ -993,19 +999,14 @@ function FiveLimitSection() {
               {sweepData
                 .filter((d) => d.isSpecial)
                 .map((d) => (
-                  <Line
+                  <ReferenceDot
                     key={d.n}
-                    type="monotone"
-                    dataKey="toplam"
-                    data={[d]}
-                    stroke={d.n === 12 ? "#3b82f6" : "#f59e0b"}
-                    strokeWidth={0}
-                    dot={{
-                      r: 6,
-                      fill: d.n === 12 ? "#3b82f6" : "#f59e0b",
-                      stroke: "white",
-                      strokeWidth: 2,
-                    }}
+                    x={d.n}
+                    y={d.toplam}
+                    r={6}
+                    fill={d.n === 12 ? "#3b82f6" : "#f59e0b"}
+                    stroke="white"
+                    strokeWidth={2}
                   />
                 ))}
             </LineChart>
