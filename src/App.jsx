@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -342,101 +342,51 @@ function ProblemSection() {
 // ============================================================
 function ContinuedFractionVisual({ coeffs, depth }) {
   const maxDepth = Math.min(depth, coeffs.length - 1);
-  const [html, setHtml] = useState("");
-  const [loaded, setLoaded] = useState(false);
+  const colorClasses = [
+    "text-amber-700 border-amber-300",
+    "text-blue-700 border-blue-300",
+    "text-green-700 border-green-300",
+    "text-purple-700 border-purple-300",
+    "text-red-700 border-red-300",
+    "text-teal-700 border-teal-300",
+    "text-pink-700 border-pink-300",
+    "text-indigo-700 border-indigo-300",
+  ];
 
-  useEffect(() => {
-    let checkInterval;
-
-    if (typeof window.__katexLoaded === "undefined") {
-      window.__katexLoaded = false;
-
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href =
-        "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css";
-      document.head.appendChild(link);
-
-      const script = document.createElement("script");
-      script.src =
-        "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js";
-      script.onload = () => {
-        window.__katexLoaded = true;
-        setLoaded(true);
-      };
-      document.head.appendChild(script);
-    } else if (window.__katexLoaded) {
-      setLoaded(true);
-    } else {
-      checkInterval = setInterval(() => {
-        if (window.__katexLoaded) {
-          clearInterval(checkInterval);
-          setLoaded(true);
-        }
-      }, 100);
-    }
-
-    return () => {
-      if (checkInterval) clearInterval(checkInterval);
-    };
-  }, []);
-
-  const latexStr = useMemo(() => {
-    const c = coeffs.slice(0, maxDepth + 1);
-    let expr = "";
-
-    const texColors = [
-      "\\color{#b45309}",
-      "\\color{#1d4ed8}",
-      "\\color{#047857}",
-      "\\color{#6d28d9}",
-      "\\color{#dc2626}",
-      "\\color{#0d9488}",
-      "\\color{#be185d}",
-      "\\color{#4338ca}",
-    ];
-
-    for (let i = maxDepth; i >= 0; i -= 1) {
-      const col = texColors[i % texColors.length];
-      const boxed = `{${col}\\boxed{\\mathbf{${c[i]}}}}`;
-
-      if (i === maxDepth) {
-        expr = boxed + (i < coeffs.length - 1 ? " + \\cdots" : "");
-      } else {
-        expr = `${boxed} + \\cfrac{1}{${expr}}`;
-      }
-    }
-
-    return `\\log_2\\!\\left(\\tfrac{3}{2}\\right) \\;\\approx\\; ${expr}`;
-  }, [maxDepth, coeffs]);
-
-  useEffect(() => {
-    if (loaded && window.katex) {
-      try {
-        const rendered = window.katex.renderToString(latexStr, {
-          displayMode: true,
-          throwOnError: false,
-          trust: true,
-        });
-        setHtml(rendered);
-      } catch {
-        setHtml('<span style="color:red">LaTeX render error</span>');
-      }
-    }
-  }, [latexStr, loaded]);
-
-  if (!loaded) {
-    return (
-      <div className="text-center text-slate-400 py-8 text-sm">KaTeX yükleniyor...</div>
+  const renderTerm = (index) => {
+    const colorClass = colorClasses[index % colorClasses.length];
+    const box = (
+      <span className={`inline-block rounded border px-1 py-0.5 font-bold ${colorClass}`}>
+        {coeffs[index]}
+      </span>
     );
-  }
+
+    if (index === maxDepth) {
+      return (
+        <span>
+          {box}
+          {index < coeffs.length - 1 ? " + ..." : ""}
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1">
+        {box}
+        <span>+</span>
+        <span className="inline-flex flex-col items-center leading-none align-middle">
+          <span className="border-b border-slate-500 px-1">1</span>
+          <span className="px-1 mt-1">{renderTerm(index + 1)}</span>
+        </span>
+      </span>
+    );
+  };
 
   return (
-    <div
-      className="overflow-x-auto py-2"
-      style={{ fontSize: "1.1em" }}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="overflow-x-auto py-2 text-center font-mono text-sm md:text-base text-slate-700">
+      <span className="font-semibold">log₂(3/2) ≈ </span>
+      {renderTerm(0)}
+    </div>
   );
 }
 
