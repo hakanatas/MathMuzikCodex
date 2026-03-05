@@ -1012,7 +1012,7 @@ function FiveLimitSection() {
           </ResponsiveContainer>
           <p className="text-xs text-slate-500 text-center mt-2">
             <span className="text-amber-600 font-bold">53-TET</span> belirgin bir
-            global minimum (vadi) oluşturur.
+            yerel minimumdur; bu taramada global minimum <span className="font-bold">118-TET</span>'te görülür.
           </p>
         </Card>
       </div>
