@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -39,6 +39,19 @@ function minErrorCents(n, ratio) {
   const step = 1200 / n;
   const k = Math.round(target / step);
   return Math.abs(target - k * step);
+}
+
+function nearestTetStep(n, ratio) {
+  return Math.round(n * Math.log2(ratio));
+}
+
+function approxRatioFromTet(n, ratio) {
+  const step = nearestTetStep(n, ratio);
+  return {
+    step,
+    approxRatio: 2 ** (step / n),
+    errorCents: minErrorCents(n, ratio),
+  };
 }
 
 function continuedFraction(x, nTerms) {
@@ -809,11 +822,258 @@ function ContinuedFractionSection() {
   );
 }
 
+function IntervalAudioLab({ nValue }) {
+  const [intervalKey, setIntervalKey] = useState("fifth");
+  const [rootHz, setRootHz] = useState(220);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioContextRef = useRef(null);
+  const activeOscillatorsRef = useRef([]);
+  const playbackTimerRef = useRef(null);
+
+  const intervalMap = {
+    fifth: { label: "Tam Beşli (3:2)", ratio: 3 / 2 },
+    major: { label: "Majör Üçlü (5:4)", ratio: 5 / 4 },
+    minor: { label: "Minör Üçlü (6:5)", ratio: 6 / 5 },
+  };
+
+  const selected = intervalMap[intervalKey];
+  const justTargetHz = rootHz * selected.ratio;
+  const tet12 = useMemo(() => approxRatioFromTet(12, selected.ratio), [selected.ratio]);
+  const tet53 = useMemo(() => approxRatioFromTet(53, selected.ratio), [selected.ratio]);
+  const tetN = useMemo(() => approxRatioFromTet(nValue, selected.ratio), [nValue, selected.ratio]);
+
+  const modeMap = {
+    just: { label: "Doğal Oran", targetHz: justTargetHz, errorCents: 0 },
+    tet12: {
+      label: "12-TET",
+      targetHz: rootHz * tet12.approxRatio,
+      errorCents: tet12.errorCents,
+    },
+    tet53: {
+      label: "53-TET",
+      targetHz: rootHz * tet53.approxRatio,
+      errorCents: tet53.errorCents,
+    },
+    tetN: {
+      label: `${nValue}-TET`,
+      targetHz: rootHz * tetN.approxRatio,
+      errorCents: tetN.errorCents,
+    },
+  };
+
+  const stopPlayback = () => {
+    if (playbackTimerRef.current) {
+      window.clearTimeout(playbackTimerRef.current);
+      playbackTimerRef.current = null;
+    }
+    activeOscillatorsRef.current.forEach((osc) => {
+      try {
+        osc.stop();
+      } catch {
+        // no-op
+      }
+    });
+    activeOscillatorsRef.current = [];
+    setIsPlaying(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopPlayback();
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
+
+  const ensureAudioContext = async () => {
+    if (typeof window === "undefined") return null;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioContextRef.current) {
+      audioContextRef.current = new Ctx();
+    }
+    if (audioContextRef.current.state === "suspended") {
+      await audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  };
+
+  const scheduleInterval = (ctx, startAt, targetHz, durationSec) => {
+    const master = ctx.createGain();
+    master.connect(ctx.destination);
+    master.gain.setValueAtTime(0, startAt);
+    master.gain.linearRampToValueAtTime(1, startAt + 0.02);
+    master.gain.setValueAtTime(1, startAt + durationSec - 0.06);
+    master.gain.linearRampToValueAtTime(0, startAt + durationSec);
+
+    const rootOsc = ctx.createOscillator();
+    rootOsc.type = "sine";
+    rootOsc.frequency.setValueAtTime(rootHz, startAt);
+    const rootGain = ctx.createGain();
+    rootGain.gain.setValueAtTime(0.045, startAt);
+    rootOsc.connect(rootGain);
+    rootGain.connect(master);
+
+    const targetOsc = ctx.createOscillator();
+    targetOsc.type = "triangle";
+    targetOsc.frequency.setValueAtTime(targetHz, startAt);
+    const targetGain = ctx.createGain();
+    targetGain.gain.setValueAtTime(0.07, startAt);
+    targetOsc.connect(targetGain);
+    targetGain.connect(master);
+
+    rootOsc.start(startAt);
+    targetOsc.start(startAt);
+    rootOsc.stop(startAt + durationSec);
+    targetOsc.stop(startAt + durationSec);
+
+    activeOscillatorsRef.current.push(rootOsc, targetOsc);
+    return startAt + durationSec;
+  };
+
+  const playModes = async (keys) => {
+    const ctx = await ensureAudioContext();
+    if (!ctx) return;
+
+    stopPlayback();
+    setIsPlaying(true);
+
+    let cursor = ctx.currentTime + 0.05;
+    const durationSec = 0.85;
+    const gapSec = 0.25;
+
+    keys.forEach((key) => {
+      cursor = scheduleInterval(ctx, cursor, modeMap[key].targetHz, durationSec) + gapSec;
+    });
+
+    playbackTimerRef.current = window.setTimeout(
+      () => setIsPlaying(false),
+      Math.ceil((cursor - ctx.currentTime) * 1000) + 80
+    );
+  };
+
+  const errorBadgeColor = (errorCents) => {
+    if (errorCents < 2) return "green";
+    if (errorCents < 8) return "amber";
+    return "red";
+  };
+
+  return (
+    <Card className="mb-6">
+      <h3 className="font-bold text-slate-700 mb-3">Sesli A/B Dinleme (Deneysel)</h3>
+      <p className="text-xs text-slate-500 mb-4">
+        Aynı aralığın doğal oran, 12-TET, 53-TET ve seçili n-TET karşılıklarını dinleyin.
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-3">
+        {Object.entries(intervalMap).map(([key, item]) => (
+          <button
+            key={key}
+            onClick={() => setIntervalKey(key)}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+              intervalKey === key
+                ? "bg-slate-800 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-4">
+        <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+          <span>Referans Frekans</span>
+          <span>{rootHz.toFixed(0)} Hz</span>
+        </div>
+        <input
+          type="range"
+          min={196}
+          max={440}
+          step={1}
+          value={rootHz}
+          onChange={(e) => setRootHz(+e.target.value)}
+          className="w-full accent-amber-500"
+        />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-2 mb-4">
+        <button
+          onClick={() => playModes(["just"])}
+          className="px-3 py-2 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700"
+        >
+          Çal: Doğal Oran
+        </button>
+        <button
+          onClick={() => playModes(["tet12"])}
+          className="px-3 py-2 rounded-lg text-xs font-medium bg-blue-100 hover:bg-blue-200 text-blue-800"
+        >
+          Çal: 12-TET
+        </button>
+        <button
+          onClick={() => playModes(["tet53"])}
+          className="px-3 py-2 rounded-lg text-xs font-medium bg-amber-100 hover:bg-amber-200 text-amber-800"
+        >
+          Çal: 53-TET
+        </button>
+        <button
+          onClick={() => playModes(["tetN"])}
+          className="px-3 py-2 rounded-lg text-xs font-medium bg-green-100 hover:bg-green-200 text-green-800"
+        >
+          Çal: {nValue}-TET
+        </button>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-2 mb-3">
+        <button
+          onClick={() => playModes(["tet12", "tet53"])}
+          className="px-3 py-2 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700"
+        >
+          A/B: 12 ↔ 53
+        </button>
+        <button
+          onClick={() => playModes(["tet53", "tetN"])}
+          className="px-3 py-2 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700"
+        >
+          A/B: 53 ↔ {nValue}
+        </button>
+        <button
+          onClick={stopPlayback}
+          className="px-3 py-2 rounded-lg text-xs font-medium bg-red-100 hover:bg-red-200 text-red-700"
+        >
+          Durdur
+        </button>
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-2 text-xs">
+        {Object.values(modeMap).map((mode) => (
+          <div key={mode.label} className="rounded-lg bg-slate-50 p-2">
+            <div className="font-semibold text-slate-700">{mode.label}</div>
+            <div className="text-slate-500">{mode.targetHz.toFixed(2)} Hz</div>
+            <div className="mt-1">
+              <Badge color={errorBadgeColor(mode.errorCents)}>
+                Hata: {mode.errorCents.toFixed(2)} sent
+              </Badge>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {isPlaying && (
+        <p className="text-xs text-amber-700 mt-3 font-medium">Ses çalıyor...</p>
+      )}
+    </Card>
+  );
+}
+
 // ============================================================
 // 5-LIMIT COMPARISON
 // ============================================================
-function FiveLimitSection() {
+function FiveLimitSection({ enhanced = false }) {
   const [nValue, setNValue] = useState(53);
+  const [sweepScale, setSweepScale] = useState("linear");
+  const [showLocalMinima, setShowLocalMinima] = useState(true);
 
   const errFifth = minErrorCents(nValue, 3 / 2);
   const errMajor = minErrorCents(nValue, 5 / 4);
@@ -848,6 +1108,17 @@ function FiveLimitSection() {
     }
     return data;
   }, []);
+
+  const localMinima = useMemo(() => {
+    const minima = [];
+    for (let i = 1; i < sweepData.length - 1; i += 1) {
+      const prev = sweepData[i - 1].toplam;
+      const curr = sweepData[i].toplam;
+      const next = sweepData[i + 1].toplam;
+      if (curr < prev && curr < next) minima.push(sweepData[i]);
+    }
+    return minima;
+  }, [sweepData]);
 
   return (
     <section className="mb-10">
@@ -907,6 +1178,7 @@ function FiveLimitSection() {
           ))}
         </div>
       </Card>
+      {enhanced && <IntervalAudioLab nValue={nValue} />}
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
@@ -961,6 +1233,41 @@ function FiveLimitSection() {
 
         <Card>
           <h3 className="font-bold text-slate-700 mb-3">Toplam Hata Taraması (n = 5...120)</h3>
+          {enhanced && (
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSweepScale("linear")}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                    sweepScale === "linear"
+                      ? "bg-slate-800 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Linear
+                </button>
+                <button
+                  onClick={() => setSweepScale("log")}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                    sweepScale === "log"
+                      ? "bg-slate-800 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Log
+                </button>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  className="accent-amber-500"
+                  checked={showLocalMinima}
+                  onChange={(e) => setShowLocalMinima(e.target.checked)}
+                />
+                Yerel minimum etiketleri
+              </label>
+            </div>
+          )}
           <ResponsiveContainer width="100%" height={250}>
             <LineChart
               data={sweepData}
@@ -974,6 +1281,8 @@ function FiveLimitSection() {
                 tick={{ fontSize: 10 }}
               />
               <YAxis
+                scale={enhanced && sweepScale === "log" ? "log" : "auto"}
+                domain={enhanced && sweepScale === "log" ? ["auto", "auto"] : [0, "auto"]}
                 tick={{ fontSize: 10 }}
                 label={{
                   value: "Sent",
@@ -1007,6 +1316,25 @@ function FiveLimitSection() {
                     fill={d.n === 12 ? "#3b82f6" : "#f59e0b"}
                     stroke="white"
                     strokeWidth={2}
+                  />
+                ))}
+              {enhanced && showLocalMinima && localMinima
+                .filter((d) => !d.isSpecial && (d.toplam <= 20 || d.n === 118))
+                .map((d) => (
+                  <ReferenceDot
+                    key={`min-${d.n}`}
+                    x={d.n}
+                    y={d.toplam}
+                    r={3.5}
+                    fill="#475569"
+                    stroke="white"
+                    strokeWidth={1.2}
+                    label={{
+                      value: `n=${d.n}`,
+                      position: "top",
+                      fill: "#475569",
+                      fontSize: 10,
+                    }}
                   />
                 ))}
             </LineChart>
@@ -1356,7 +1684,8 @@ function ConclusionSection() {
 // ============================================================
 // MAIN APP
 // ============================================================
-export default function App() {
+export default function App({ variant = "classic" }) {
+  const enhanced = variant === "enhanced";
   const sections = [
     { id: "problem", label: "Problem", icon: BookOpen },
     { id: "cf", label: "Sürekli Kesirler", icon: Calculator },
@@ -1384,6 +1713,12 @@ export default function App() {
       </nav>
 
       <div className="max-w-5xl mx-auto px-4 py-6">
+        {enhanced && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+            Enhanced v2: Sesli A/B modülü, yerel minimum etiketleri ve linear/log ölçek
+            seçenekleri aktif.
+          </div>
+        )}
         <HeroSection />
         <div id="problem">
           <ProblemSection />
@@ -1395,7 +1730,7 @@ export default function App() {
           <CentsRulerSection />
         </div>
         <div id="5limit">
-          <FiveLimitSection />
+          <FiveLimitSection enhanced={enhanced} />
         </div>
         <div id="makam">
           <MakamSection />
