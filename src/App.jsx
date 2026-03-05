@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -39,19 +39,6 @@ function minErrorCents(n, ratio) {
   const step = 1200 / n;
   const k = Math.round(target / step);
   return Math.abs(target - k * step);
-}
-
-function nearestTetStep(n, ratio) {
-  return Math.round(n * Math.log2(ratio));
-}
-
-function approxRatioFromTet(n, ratio) {
-  const step = nearestTetStep(n, ratio);
-  return {
-    step,
-    approxRatio: 2 ** (step / n),
-    errorCents: minErrorCents(n, ratio),
-  };
 }
 
 function continuedFraction(x, nTerms) {
@@ -118,14 +105,16 @@ const MAKAM_DATA = [
 function SectionTitle({ icon: Icon, title, subtitle }) {
   return (
     <div className="mb-8 text-center">
-      <div className="inline-flex items-center gap-3 mb-2">
-        <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg">
-          <Icon size={24} />
+      <div className="inline-flex items-center gap-3 mb-2 px-4 py-2 rounded-full bg-white/70 backdrop-blur-md border border-slate-200/70">
+        <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md">
+          <Icon size={20} />
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{title}</h2>
+        <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-800">
+          {title}
+        </h2>
       </div>
       {subtitle && (
-        <p className="text-slate-500 text-sm mt-1 max-w-2xl mx-auto">{subtitle}</p>
+        <p className="text-slate-600 text-sm mt-2 max-w-2xl mx-auto">{subtitle}</p>
       )}
     </div>
   );
@@ -134,10 +123,10 @@ function SectionTitle({ icon: Icon, title, subtitle }) {
 function Card({ children, className = "", highlight = false }) {
   return (
     <div
-      className={`rounded-2xl p-5 md:p-6 shadow-sm border transition-all duration-300 ${
+      className={`rounded-3xl p-5 md:p-6 border backdrop-blur-sm transition-all duration-300 ${
         highlight
-          ? "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200 shadow-amber-100"
-          : "bg-white border-slate-200 hover:shadow-md"
+          ? "bg-gradient-to-br from-amber-50/95 to-orange-100/80 border-amber-200/80 shadow-[0_20px_40px_-28px_rgba(217,119,6,0.7)]"
+          : "bg-white/90 border-slate-200/80 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.55)] hover:shadow-[0_28px_55px_-35px_rgba(15,23,42,0.6)]"
       } ${className}`}
     >
       {children}
@@ -156,16 +145,16 @@ function StatBox({ value, label, color = "text-amber-600" }) {
 
 function Badge({ children, color = "amber" }) {
   const colors = {
-    amber: "bg-amber-100 text-amber-800",
-    blue: "bg-blue-100 text-blue-800",
-    green: "bg-green-100 text-green-800",
-    red: "bg-red-100 text-red-800",
-    purple: "bg-purple-100 text-purple-800",
+    amber: "bg-amber-100/90 text-amber-900 ring-amber-200",
+    blue: "bg-blue-100/90 text-blue-900 ring-blue-200",
+    green: "bg-green-100/90 text-green-900 ring-green-200",
+    red: "bg-red-100/90 text-red-900 ring-red-200",
+    purple: "bg-purple-100/90 text-purple-900 ring-purple-200",
   };
 
   return (
     <span
-      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${colors[color]}`}
+      className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold ring-1 ${colors[color]}`}
     >
       {children}
     </span>
@@ -176,10 +165,10 @@ function Collapsible({ title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden mb-3">
+    <div className="border border-slate-200/80 rounded-2xl overflow-hidden mb-3 bg-white/80 backdrop-blur-sm">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+        className="w-full flex items-center justify-between p-4 bg-slate-50/70 hover:bg-slate-100/90 transition-colors text-left"
       >
         <span className="font-semibold text-slate-700">{title}</span>
         {open ? (
@@ -188,7 +177,7 @@ function Collapsible({ title, children, defaultOpen = false }) {
           <ChevronRight size={18} className="text-slate-400" />
         )}
       </button>
-      {open && <div className="p-4 border-t border-slate-200">{children}</div>}
+      {open && <div className="p-4 border-t border-slate-200/80">{children}</div>}
     </div>
   );
 }
@@ -198,7 +187,9 @@ function Collapsible({ title, children, defaultOpen = false }) {
 // ============================================================
 function HeroSection() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-amber-900 text-white py-12 px-6 md:py-16 rounded-3xl mb-8">
+    <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-amber-900 text-white py-12 px-6 md:py-16 rounded-[2rem] mb-10 border border-slate-700/40 shadow-[0_30px_80px_-45px_rgba(2,6,23,0.9)]">
+      <div className="absolute -top-24 -right-20 w-64 h-64 rounded-full bg-gradient-to-br from-amber-300/30 to-orange-500/10 blur-3xl" />
+      <div className="absolute -bottom-24 -left-16 w-72 h-72 rounded-full bg-gradient-to-br from-teal-300/20 to-cyan-500/10 blur-3xl" />
       <div
         className="absolute inset-0 opacity-10"
         style={{
@@ -207,12 +198,8 @@ function HeroSection() {
         }}
       />
       <div className="relative z-10 max-w-4xl mx-auto text-center">
-        <div className="flex justify-center gap-3 mb-4">
-          <span className="text-4xl">🎵</span>
-          <span className="text-4xl">➕</span>
-          <span className="text-4xl">🔢</span>
-          <span className="text-4xl">➡️</span>
-          <span className="text-4xl">🎯</span>
+        <div className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm text-xs tracking-wide uppercase text-slate-200">
+          Matematik + Müzik + Optimizasyon
         </div>
         <h1 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
           Sürekli Kesirler ile
@@ -224,7 +211,7 @@ function HeroSection() {
           <br />
           Matematiksel Optimizasyonu
         </h1>
-        <p className="text-lg text-slate-300 max-w-2xl mx-auto mb-6">
+        <p className="text-lg text-slate-300 max-w-2xl mx-auto mb-7">
           Müzik ve matematik arasındaki binlerce yıllık köprüyü keşfedin. 12 ve 53
           sayılarının neden kültürel birer tesadüf değil, matematiksel birer
           zorunluluk olduğunu interaktif olarak görün.
@@ -822,251 +809,6 @@ function ContinuedFractionSection() {
   );
 }
 
-function IntervalAudioLab({ nValue }) {
-  const [intervalKey, setIntervalKey] = useState("fifth");
-  const [rootHz, setRootHz] = useState(220);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioContextRef = useRef(null);
-  const activeOscillatorsRef = useRef([]);
-  const playbackTimerRef = useRef(null);
-
-  const intervalMap = {
-    fifth: { label: "Tam Beşli (3:2)", ratio: 3 / 2 },
-    major: { label: "Majör Üçlü (5:4)", ratio: 5 / 4 },
-    minor: { label: "Minör Üçlü (6:5)", ratio: 6 / 5 },
-  };
-
-  const selected = intervalMap[intervalKey];
-  const justTargetHz = rootHz * selected.ratio;
-  const tet12 = useMemo(() => approxRatioFromTet(12, selected.ratio), [selected.ratio]);
-  const tet53 = useMemo(() => approxRatioFromTet(53, selected.ratio), [selected.ratio]);
-  const tetN = useMemo(() => approxRatioFromTet(nValue, selected.ratio), [nValue, selected.ratio]);
-
-  const modeMap = {
-    just: { label: "Doğal Oran", targetHz: justTargetHz, errorCents: 0 },
-    tet12: {
-      label: "12-TET",
-      targetHz: rootHz * tet12.approxRatio,
-      errorCents: tet12.errorCents,
-    },
-    tet53: {
-      label: "53-TET",
-      targetHz: rootHz * tet53.approxRatio,
-      errorCents: tet53.errorCents,
-    },
-    tetN: {
-      label: `${nValue}-TET`,
-      targetHz: rootHz * tetN.approxRatio,
-      errorCents: tetN.errorCents,
-    },
-  };
-
-  const stopPlayback = () => {
-    if (playbackTimerRef.current) {
-      window.clearTimeout(playbackTimerRef.current);
-      playbackTimerRef.current = null;
-    }
-    activeOscillatorsRef.current.forEach((osc) => {
-      try {
-        osc.stop();
-      } catch {
-        // no-op
-      }
-    });
-    activeOscillatorsRef.current = [];
-    setIsPlaying(false);
-  };
-
-  useEffect(() => {
-    return () => {
-      stopPlayback();
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => {});
-      }
-    };
-  }, []);
-
-  const ensureAudioContext = async () => {
-    if (typeof window === "undefined") return null;
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return null;
-    if (!audioContextRef.current) {
-      audioContextRef.current = new Ctx();
-    }
-    if (audioContextRef.current.state === "suspended") {
-      await audioContextRef.current.resume();
-    }
-    return audioContextRef.current;
-  };
-
-  const scheduleInterval = (ctx, startAt, targetHz, durationSec) => {
-    const master = ctx.createGain();
-    master.connect(ctx.destination);
-    master.gain.setValueAtTime(0, startAt);
-    master.gain.linearRampToValueAtTime(1, startAt + 0.02);
-    master.gain.setValueAtTime(1, startAt + durationSec - 0.06);
-    master.gain.linearRampToValueAtTime(0, startAt + durationSec);
-
-    const rootOsc = ctx.createOscillator();
-    rootOsc.type = "sine";
-    rootOsc.frequency.setValueAtTime(rootHz, startAt);
-    const rootGain = ctx.createGain();
-    rootGain.gain.setValueAtTime(0.045, startAt);
-    rootOsc.connect(rootGain);
-    rootGain.connect(master);
-
-    const targetOsc = ctx.createOscillator();
-    targetOsc.type = "triangle";
-    targetOsc.frequency.setValueAtTime(targetHz, startAt);
-    const targetGain = ctx.createGain();
-    targetGain.gain.setValueAtTime(0.07, startAt);
-    targetOsc.connect(targetGain);
-    targetGain.connect(master);
-
-    rootOsc.start(startAt);
-    targetOsc.start(startAt);
-    rootOsc.stop(startAt + durationSec);
-    targetOsc.stop(startAt + durationSec);
-
-    activeOscillatorsRef.current.push(rootOsc, targetOsc);
-    return startAt + durationSec;
-  };
-
-  const playModes = async (keys) => {
-    const ctx = await ensureAudioContext();
-    if (!ctx) return;
-
-    stopPlayback();
-    setIsPlaying(true);
-
-    let cursor = ctx.currentTime + 0.05;
-    const durationSec = 0.85;
-    const gapSec = 0.25;
-
-    keys.forEach((key) => {
-      cursor = scheduleInterval(ctx, cursor, modeMap[key].targetHz, durationSec) + gapSec;
-    });
-
-    playbackTimerRef.current = window.setTimeout(
-      () => setIsPlaying(false),
-      Math.ceil((cursor - ctx.currentTime) * 1000) + 80
-    );
-  };
-
-  const errorBadgeColor = (errorCents) => {
-    if (errorCents < 2) return "green";
-    if (errorCents < 8) return "amber";
-    return "red";
-  };
-
-  return (
-    <Card className="mb-6">
-      <h3 className="font-bold text-slate-700 mb-3">Sesli A/B Dinleme (Deneysel)</h3>
-      <p className="text-xs text-slate-500 mb-4">
-        Aynı aralığın doğal oran, 12-TET, 53-TET ve seçili n-TET karşılıklarını dinleyin.
-      </p>
-
-      <div className="flex flex-wrap gap-2 mb-3">
-        {Object.entries(intervalMap).map(([key, item]) => (
-          <button
-            key={key}
-            onClick={() => setIntervalKey(key)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-              intervalKey === key
-                ? "bg-slate-800 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-4">
-        <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-          <span>Referans Frekans</span>
-          <span>{rootHz.toFixed(0)} Hz</span>
-        </div>
-        <input
-          type="range"
-          min={196}
-          max={440}
-          step={1}
-          value={rootHz}
-          onChange={(e) => setRootHz(+e.target.value)}
-          className="w-full accent-amber-500"
-        />
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-2 mb-4">
-        <button
-          onClick={() => playModes(["just"])}
-          className="px-3 py-2 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700"
-        >
-          Çal: Doğal Oran
-        </button>
-        <button
-          onClick={() => playModes(["tet12"])}
-          className="px-3 py-2 rounded-lg text-xs font-medium bg-blue-100 hover:bg-blue-200 text-blue-800"
-        >
-          Çal: 12-TET
-        </button>
-        <button
-          onClick={() => playModes(["tet53"])}
-          className="px-3 py-2 rounded-lg text-xs font-medium bg-amber-100 hover:bg-amber-200 text-amber-800"
-        >
-          Çal: 53-TET
-        </button>
-        <button
-          onClick={() => playModes(["tetN"])}
-          className="px-3 py-2 rounded-lg text-xs font-medium bg-green-100 hover:bg-green-200 text-green-800"
-        >
-          Çal: {nValue}-TET
-        </button>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-2 mb-3">
-        <button
-          onClick={() => playModes(["tet12", "tet53"])}
-          className="px-3 py-2 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700"
-        >
-          A/B: 12 ↔ 53
-        </button>
-        <button
-          onClick={() => playModes(["tet53", "tetN"])}
-          className="px-3 py-2 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700"
-        >
-          A/B: 53 ↔ {nValue}
-        </button>
-        <button
-          onClick={stopPlayback}
-          className="px-3 py-2 rounded-lg text-xs font-medium bg-red-100 hover:bg-red-200 text-red-700"
-        >
-          Durdur
-        </button>
-      </div>
-
-      <div className="grid md:grid-cols-4 gap-2 text-xs">
-        {Object.values(modeMap).map((mode) => (
-          <div key={mode.label} className="rounded-lg bg-slate-50 p-2">
-            <div className="font-semibold text-slate-700">{mode.label}</div>
-            <div className="text-slate-500">{mode.targetHz.toFixed(2)} Hz</div>
-            <div className="mt-1">
-              <Badge color={errorBadgeColor(mode.errorCents)}>
-                Hata: {mode.errorCents.toFixed(2)} sent
-              </Badge>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {isPlaying && (
-        <p className="text-xs text-amber-700 mt-3 font-medium">Ses çalıyor...</p>
-      )}
-    </Card>
-  );
-}
-
 // ============================================================
 // 5-LIMIT COMPARISON
 // ============================================================
@@ -1178,8 +920,6 @@ function FiveLimitSection({ enhanced = false }) {
           ))}
         </div>
       </Card>
-      {enhanced && <IntervalAudioLab nValue={nValue} />}
-
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
           <h3 className="font-bold text-slate-700 mb-3">12-TET vs 53-TET Karşılaştırma</h3>
@@ -1696,14 +1436,18 @@ export default function App({ variant = "classic" }) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-200 py-2 px-4">
-        <div className="max-w-5xl mx-auto flex gap-1 overflow-x-auto">
+    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-amber-50/35">
+      <div className="pointer-events-none fixed inset-0 opacity-70">
+        <div className="absolute top-[-120px] right-[-100px] h-[340px] w-[340px] rounded-full bg-amber-300/25 blur-3xl" />
+        <div className="absolute bottom-[-140px] left-[-100px] h-[360px] w-[360px] rounded-full bg-cyan-300/20 blur-3xl" />
+      </div>
+      <nav className="sticky top-3 z-50 px-4">
+        <div className="max-w-5xl mx-auto flex gap-1 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/80 backdrop-blur-xl shadow-[0_12px_35px_-25px_rgba(15,23,42,0.7)] p-2">
           {sections.map((s) => (
             <a
               key={s.id}
               href={`#${s.id}`}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-600 hover:bg-slate-100/90 hover:text-slate-900 transition-all"
             >
               <s.icon size={14} />
               {s.label}
@@ -1712,11 +1456,10 @@ export default function App({ variant = "classic" }) {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="relative max-w-5xl mx-auto px-4 py-6">
         {enhanced && (
           <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
-            Enhanced v2: Sesli A/B modülü, yerel minimum etiketleri ve linear/log ölçek
-            seçenekleri aktif.
+            Enhanced v2: Yerel minimum etiketleri ve linear/log ölçek seçenekleri aktif.
           </div>
         )}
         <HeroSection />
@@ -1739,7 +1482,7 @@ export default function App({ variant = "classic" }) {
           <ConclusionSection />
         </div>
 
-        <footer className="text-center text-xs text-slate-400 py-6 border-t border-slate-100">
+        <footer className="text-center text-xs text-slate-500 py-8 border-t border-slate-200/80 mt-3">
           Bu interaktif sayfa, İpek AR'ın "Sürekli Kesirler ve Diophant Yaklaşımı
           ile Türk Makam Sisteminin Matematiksel Optimizasyonu" projesi temel
           alınarak hazırlanmıştır.
