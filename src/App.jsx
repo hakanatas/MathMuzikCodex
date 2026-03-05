@@ -25,6 +25,8 @@ import {
   Info,
   Zap,
 } from "lucide-react";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 // ============================================================
 // DATA & MATH UTILITIES
@@ -342,51 +344,53 @@ function ProblemSection() {
 // ============================================================
 function ContinuedFractionVisual({ coeffs, depth }) {
   const maxDepth = Math.min(depth, coeffs.length - 1);
-  const colorClasses = [
-    "text-amber-700 border-amber-300",
-    "text-blue-700 border-blue-300",
-    "text-green-700 border-green-300",
-    "text-purple-700 border-purple-300",
-    "text-red-700 border-red-300",
-    "text-teal-700 border-teal-300",
-    "text-pink-700 border-pink-300",
-    "text-indigo-700 border-indigo-300",
-  ];
+  const latexStr = useMemo(() => {
+    const c = coeffs.slice(0, maxDepth + 1);
+    let expr = "";
 
-  const renderTerm = (index) => {
-    const colorClass = colorClasses[index % colorClasses.length];
-    const box = (
-      <span className={`inline-block rounded border px-1 py-0.5 font-bold ${colorClass}`}>
-        {coeffs[index]}
-      </span>
-    );
+    const texColors = [
+      "\\color{#b45309}",
+      "\\color{#1d4ed8}",
+      "\\color{#047857}",
+      "\\color{#6d28d9}",
+      "\\color{#dc2626}",
+      "\\color{#0d9488}",
+      "\\color{#be185d}",
+      "\\color{#4338ca}",
+    ];
 
-    if (index === maxDepth) {
-      return (
-        <span>
-          {box}
-          {index < coeffs.length - 1 ? " + ..." : ""}
-        </span>
-      );
+    for (let i = maxDepth; i >= 0; i -= 1) {
+      const col = texColors[i % texColors.length];
+      const boxed = `{${col}\\boxed{\\mathbf{${c[i]}}}}`;
+
+      if (i === maxDepth) {
+        expr = boxed + (i < coeffs.length - 1 ? " + \\cdots" : "");
+      } else {
+        expr = `${boxed} + \\cfrac{1}{${expr}}`;
+      }
     }
 
-    return (
-      <span className="inline-flex items-center gap-1">
-        {box}
-        <span>+</span>
-        <span className="inline-flex flex-col items-center leading-none align-middle">
-          <span className="border-b border-slate-500 px-1">1</span>
-          <span className="px-1 mt-1">{renderTerm(index + 1)}</span>
-        </span>
-      </span>
-    );
-  };
+    return `\\log_2\\!\\left(\\tfrac{3}{2}\\right) \\;\\approx\\; ${expr}`;
+  }, [maxDepth, coeffs]);
+
+  const html = useMemo(() => {
+    try {
+      return katex.renderToString(latexStr, {
+        displayMode: true,
+        throwOnError: false,
+        trust: false,
+      });
+    } catch {
+      return '<span style="color:red">LaTeX render error</span>';
+    }
+  }, [latexStr]);
 
   return (
-    <div className="overflow-x-auto py-2 text-center font-mono text-sm md:text-base text-slate-700">
-      <span className="font-semibold">log₂(3/2) ≈ </span>
-      {renderTerm(0)}
-    </div>
+    <div
+      className="overflow-x-auto py-2"
+      style={{ fontSize: "1.1em" }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
